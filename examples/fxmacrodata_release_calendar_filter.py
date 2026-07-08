@@ -22,6 +22,7 @@ FXMD_HOST = "fxmacrodata.com"
 
 
 def normalize_currency(currency: str) -> str:
+    """Return a normalized ISO currency code for the FXMacroData API path."""
     currency_code = currency.strip().upper()
     if len(currency_code) != 3 or not currency_code.isalpha():
         raise ValueError("currency must be a three-letter ISO currency code")
@@ -33,6 +34,7 @@ def fetch_release_events(
     start_date: str,
     end_date: str,
 ) -> List[Dict[str, Any]]:
+    """Fetch FXMacroData release-calendar events for a currency and date range."""
     params = urlencode({"start_date": start_date, "end_date": end_date})
     url = f"{FXMD_CALENDAR_URL.format(currency=normalize_currency(currency))}?{params}"
     parsed = urlparse(url)
@@ -51,6 +53,7 @@ def build_blackout_dates(
     min_market_tier: int = 1,
     window_days: int = 0,
 ) -> Set[str]:
+    """Build a set of UTC calendar dates around confirmed macro events."""
     blackout_dates: Set[str] = set()
 
     for event in events:
@@ -76,11 +79,13 @@ def build_blackout_dates(
 
 
 def timestamp_ns_to_date(timestamp_ns: int) -> str:
+    """Convert a nanosecond timestamp to a UTC calendar date string."""
     timestamp_seconds = timestamp_ns / 1_000_000_000
     return datetime.fromtimestamp(timestamp_seconds, timezone.utc).date().isoformat()
 
 
 def can_quote(timestamp_ns: int, blackout_dates: Set[str]) -> bool:
+    """Return whether a timestamp falls outside the macro-event blackout dates."""
     return timestamp_ns_to_date(timestamp_ns) not in blackout_dates
 
 
