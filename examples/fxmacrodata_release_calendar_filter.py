@@ -12,10 +12,20 @@ from datetime import timezone
 import json
 from typing import Any, Dict, Iterable, List, Set
 from urllib.parse import urlencode
+from urllib.parse import urlparse
+from urllib.request import Request
 from urllib.request import urlopen
 
 
 FXMD_CALENDAR_URL = "https://fxmacrodata.com/api/v1/calendar/{currency}"
+FXMD_HOST = "fxmacrodata.com"
+
+
+def normalize_currency(currency: str) -> str:
+    currency_code = currency.strip().upper()
+    if len(currency_code) != 3 or not currency_code.isalpha():
+        raise ValueError("currency must be a three-letter ISO currency code")
+    return currency_code
 
 
 def fetch_release_events(
@@ -24,9 +34,13 @@ def fetch_release_events(
     end_date: str,
 ) -> List[Dict[str, Any]]:
     params = urlencode({"start_date": start_date, "end_date": end_date})
-    url = f"{FXMD_CALENDAR_URL.format(currency=currency.upper())}?{params}"
+    url = f"{FXMD_CALENDAR_URL.format(currency=normalize_currency(currency))}?{params}"
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or parsed.netloc != FXMD_HOST:
+        raise ValueError("release calendar URL must use the FXMacroData HTTPS host")
 
-    with urlopen(url, timeout=20) as response:
+    request = Request(url, headers={"User-Agent": "hftbacktest-fxmacrodata-example"})
+    with urlopen(request, timeout=20) as response:  # nosec B310
         payload = json.load(response)
 
     return payload.get("data", [])
