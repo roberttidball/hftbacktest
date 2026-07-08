@@ -87,11 +87,3 @@ def timestamp_ns_to_date(timestamp_ns: int) -> str:
 def can_quote(timestamp_ns: int, blackout_dates: Set[str]) -> bool:
     """Return whether a timestamp falls outside the macro-event blackout dates."""
     return timestamp_ns_to_date(timestamp_ns) not in blackout_dates
-
-
-# Example:
-#
-# events = fetch_release_events("USD", "2026-07-01", "2026-07-31")
-# blackout_dates = build_blackout_dates(events, min_market_tier=1, window_days=0)
-# if not can_quote(hbt.current_timestamp, blackout_dates):
-#     continue
