@@ -1,4 +1,5 @@
-"""Fetch macro-event blackout dates for hftbacktest experiments.
+"""
+Fetch macro-event blackout dates for hftbacktest experiments.
 
 High-frequency strategies often behave differently around scheduled macro
 releases. This helper pulls the FXMacroData public release calendar and creates
