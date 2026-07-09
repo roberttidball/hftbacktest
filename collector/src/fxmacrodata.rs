@@ -10,6 +10,7 @@ use tracing::info;
 
 const DEFAULT_BASE_URL: &str = "https://fxmacrodata.com/api/v1/";
 
+/// Client for FXMacroData REST and GraphQL endpoints.
 #[derive(Debug, Clone)]
 pub struct FxMacroDataClient {
     client: Client,
@@ -26,6 +27,8 @@ struct GraphQlRequest<'a> {
 }
 
 impl FxMacroDataClient {
+    /// Builds a client from the `FXMACRODATA_API_KEY` or `FXMD_API_KEY`
+    /// environment variable.
     pub fn from_env() -> Result<Self> {
         let api_key = std::env::var("FXMACRODATA_API_KEY")
             .or_else(|_| std::env::var("FXMD_API_KEY"))
@@ -33,11 +36,13 @@ impl FxMacroDataClient {
         Self::with_base_url(api_key, DEFAULT_BASE_URL)
     }
 
+    /// Builds a client using the default FXMacroData API URL.
     #[allow(dead_code)]
     pub fn new(api_key: impl Into<String>) -> Self {
         Self::with_base_url(api_key, DEFAULT_BASE_URL).expect("default FXMacroData URL is valid")
     }
 
+    /// Builds a client using a caller-supplied API base URL.
     pub fn with_base_url(api_key: impl Into<String>, base_url: &str) -> Result<Self> {
         Ok(Self {
             client: Client::new(),
@@ -46,16 +51,19 @@ impl FxMacroDataClient {
         })
     }
 
+    /// Sends a generic GET request to a relative FXMacroData API path.
     #[allow(dead_code)]
     pub async fn request(&self, path: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(path, params).await
     }
 
+    /// Retrieves the FXMacroData data catalogue for a currency.
     pub async fn data_catalogue(&self, currency: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("data_catalogue/{currency}"), params)
             .await
     }
 
+    /// Retrieves announcement history for a currency and indicator.
     pub async fn announcements(
         &self,
         currency: &str,
@@ -66,6 +74,7 @@ impl FxMacroDataClient {
             .await
     }
 
+    /// Retrieves the latest announcements for a currency.
     pub async fn latest_announcements(
         &self,
         currency: &str,
@@ -75,14 +84,17 @@ impl FxMacroDataClient {
             .await
     }
 
+    /// Retrieves recently changed announcement records.
     pub async fn announcement_changes(&self, params: &[(&str, String)]) -> Result<Value> {
         self.get_json("announcements/changes", params).await
     }
 
+    /// Retrieves the release calendar for a currency.
     pub async fn calendar(&self, currency: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("calendar/{currency}"), params).await
     }
 
+    /// Retrieves prediction data for a currency and indicator.
     pub async fn predictions(
         &self,
         currency: &str,
@@ -93,38 +105,46 @@ impl FxMacroDataClient {
             .await
     }
 
+    /// Retrieves FX spot history for a base/quote pair.
     pub async fn forex(&self, base: &str, quote: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("forex/{base}/{quote}"), params)
             .await
     }
 
+    /// Retrieves COT positioning data for a currency.
     pub async fn cot(&self, currency: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("cot/{currency}"), params).await
     }
 
+    /// Retrieves a commodity series by indicator slug.
     pub async fn commodity(&self, indicator: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("commodities/{indicator}"), params)
             .await
     }
 
+    /// Retrieves the latest commodity observations.
     pub async fn commodities_latest(&self, params: &[(&str, String)]) -> Result<Value> {
         self.get_json("commodities/latest", params).await
     }
 
+    /// Retrieves curve data for a currency.
     pub async fn curves(&self, currency: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("curves/{currency}"), params).await
     }
 
+    /// Retrieves curve proxy data for a currency.
     pub async fn curve_proxies(&self, currency: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("curve_proxies/{currency}"), params)
             .await
     }
 
+    /// Retrieves forward-curve data for a currency.
     pub async fn forward_curves(&self, currency: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("forward_curves/{currency}"), params)
             .await
     }
 
+    /// Retrieves rate differentials for a currency pair.
     pub async fn rate_differentials(
         &self,
         base: &str,
@@ -135,6 +155,7 @@ impl FxMacroDataClient {
             .await
     }
 
+    /// Retrieves forward-rate differentials for a currency pair.
     pub async fn forward_differentials(
         &self,
         base: &str,
@@ -145,23 +166,28 @@ impl FxMacroDataClient {
             .await
     }
 
+    /// Retrieves current FX market-session data.
     pub async fn market_sessions(&self, params: &[(&str, String)]) -> Result<Value> {
         self.get_json("market_sessions", params).await
     }
 
+    /// Retrieves current risk-sentiment data.
     pub async fn risk_sentiment(&self, params: &[(&str, String)]) -> Result<Value> {
         self.get_json("risk_sentiment", params).await
     }
 
+    /// Retrieves central-bank news for a currency.
     pub async fn news(&self, currency: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("news/{currency}"), params).await
     }
 
+    /// Retrieves central-bank press releases for a currency.
     pub async fn press_releases(&self, currency: &str, params: &[(&str, String)]) -> Result<Value> {
         self.get_json(&format!("press-releases/{currency}"), params)
             .await
     }
 
+    /// Sends a GraphQL query to FXMacroData.
     #[allow(dead_code)]
     pub async fn graphql(&self, query: &str, variables: Option<Value>) -> Result<Value> {
         let url = self.build_url("graphql", &[])?;
@@ -217,6 +243,8 @@ impl FxMacroDataClient {
     }
 }
 
+/// Collects FXMacroData payloads for pairs, currencies, indicators, and
+/// commodities.
 pub async fn run_collection(
     symbols: Vec<String>,
     writer_tx: UnboundedSender<(DateTime<Utc>, String, String)>,
