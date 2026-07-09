@@ -1,11 +1,4 @@
-"""
-Fetch macro-event blackout dates for hftbacktest experiments.
-
-High-frequency strategies often behave differently around scheduled macro
-releases. This helper pulls the FXMacroData public release calendar and creates
-a set of tier-one USD dates that can be used to segment replay results or pause
-new quoting during event windows.
-"""
+"""Fetch macro-event blackout dates for hftbacktest experiments."""
 
 from datetime import datetime
 from datetime import timedelta
