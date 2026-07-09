@@ -1,3 +1,5 @@
+//! FXMacroData collector integration for macro, FX, commodity, and rates data.
+
 use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, Utc};
 use reqwest::{Client, Url};
