@@ -11,7 +11,7 @@ from urllib.request import Request
 from urllib.request import urlopen
 
 
-FXMD_CALENDAR_URL = "https://fxmacrodata.com/api/v1/calendar/{currency}"
+FXMD_CALENDAR_URL = "https://api.fxmacrodata.com/v1/calendar/{currency}"
 FXMD_HOST = "fxmacrodata.com"
 
 
