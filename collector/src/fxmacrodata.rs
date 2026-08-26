@@ -8,7 +8,7 @@ use serde_json::Value;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
 
-const DEFAULT_BASE_URL: &str = "https://fxmacrodata.com/api/v1/";
+const DEFAULT_BASE_URL: &str = "https://api.fxmacrodata.com/v1/";
 
 /// Client for FXMacroData REST and GraphQL endpoints.
 #[derive(Debug, Clone)]
