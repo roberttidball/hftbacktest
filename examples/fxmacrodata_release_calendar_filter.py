@@ -4,6 +4,7 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 import json
+import os
 from typing import Any, Dict, Iterable, List, Set
 from urllib.parse import urlencode
 from urllib.parse import urlparse
@@ -12,7 +13,7 @@ from urllib.request import urlopen
 
 
 FXMD_CALENDAR_URL = "https://api.fxmacrodata.com/v1/calendar/{currency}"
-FXMD_HOST = "fxmacrodata.com"
+FXMD_HOST = "api.fxmacrodata.com"
 
 
 def normalize_currency(currency: str) -> str:
@@ -35,7 +36,12 @@ def fetch_release_events(
     if parsed.scheme != "https" or parsed.netloc != FXMD_HOST:
         raise ValueError("release calendar URL must use the FXMacroData HTTPS host")
 
-    request = Request(url, headers={"User-Agent": "hftbacktest-fxmacrodata-example"})
+    headers = {"User-Agent": "hftbacktest-fxmacrodata-example"}
+    api_key = os.environ.get("FXMACRODATA_API_KEY")
+    if api_key:
+        headers["X-API-Key"] = api_key
+
+    request = Request(url, headers=headers)
     with urlopen(request, timeout=20) as response:  # nosec B310
         payload = json.load(response)
 

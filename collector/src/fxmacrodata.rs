@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, Utc};
-use reqwest::{Client, Url};
+use reqwest::{Client, RequestBuilder, Url};
 use serde::Serialize;
 use serde_json::Value;
 use tokio::sync::mpsc::UnboundedSender;
@@ -191,10 +191,12 @@ impl FxMacroDataClient {
     #[allow(dead_code)]
     pub async fn graphql(&self, query: &str, variables: Option<Value>) -> Result<Value> {
         let url = self.build_url("graphql", &[])?;
-        let response = self
+        let request = self
             .client
             .post(url.clone())
-            .json(&GraphQlRequest { query, variables })
+            .json(&GraphQlRequest { query, variables });
+        let response = self
+            .with_api_key(request)
             .send()
             .await
             .context("FXMacroData GraphQL request failed")?;
@@ -204,9 +206,9 @@ impl FxMacroDataClient {
 
     async fn get_json(&self, path: &str, params: &[(&str, String)]) -> Result<Value> {
         let url = self.build_url(path, params)?;
+        let request = self.client.get(url.clone());
         let response = self
-            .client
-            .get(url.clone())
+            .with_api_key(request)
             .send()
             .await
             .context("FXMacroData request failed")?;
@@ -219,14 +221,22 @@ impl FxMacroDataClient {
             .base_url
             .join(path.trim_start_matches('/'))
             .context("failed to build FXMacroData URL")?;
-        {
+        if !params.is_empty() {
             let mut query = url.query_pairs_mut();
             for (key, value) in params {
                 query.append_pair(key, value);
             }
-            query.append_pair("api_key", &self.api_key);
         }
         Ok(url)
+    }
+
+    /// Adds the `X-API-Key` header when an API key is configured.
+    fn with_api_key(&self, request: RequestBuilder) -> RequestBuilder {
+        if self.api_key.is_empty() {
+            request
+        } else {
+            request.header("X-API-Key", &self.api_key)
+        }
     }
 
     async fn parse_response(response: reqwest::Response, url: &str) -> Result<Value> {
@@ -441,8 +451,42 @@ mod tests {
 
         assert_eq!(
             url.as_str(),
-            "https://example.com/api/v1/forex/eur/usd?limit=1&api_key=test-key"
+            "https://example.com/api/v1/forex/eur/usd?limit=1"
         );
+    }
+
+    #[test]
+    fn sends_api_key_header() {
+        let client = FxMacroDataClient::with_base_url("test-key", "https://example.com/api/v1/")
+            .expect("valid base URL");
+        let url = client
+            .build_url("forex/eur/usd", &[])
+            .expect("URL should build");
+        let request = client
+            .with_api_key(client.client.get(url))
+            .build()
+            .expect("request should build");
+
+        assert_eq!(
+            request.url().as_str(),
+            "https://example.com/api/v1/forex/eur/usd"
+        );
+        assert_eq!(request.headers()["X-API-Key"], "test-key");
+    }
+
+    #[test]
+    fn omits_api_key_header_without_key() {
+        let client = FxMacroDataClient::with_base_url("", "https://example.com/api/v1/")
+            .expect("valid base URL");
+        let url = client
+            .build_url("calendar/usd", &[])
+            .expect("URL should build");
+        let request = client
+            .with_api_key(client.client.get(url))
+            .build()
+            .expect("request should build");
+
+        assert!(request.headers().get("X-API-Key").is_none());
     }
 
     #[test]
