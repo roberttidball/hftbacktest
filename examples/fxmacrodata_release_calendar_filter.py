@@ -37,15 +37,21 @@ def fetch_release_events(
         raise ValueError("release calendar URL must use the FXMacroData HTTPS host")
 
     headers = {"User-Agent": "hftbacktest-fxmacrodata-example"}
-    api_key = os.environ.get("FXMACRODATA_API_KEY")
-    if api_key:
-        headers["X-API-Key"] = api_key
+    api_key = (os.environ.get("FXMACRODATA_API_KEY") or "").strip()
+    if any(char.isspace() or ord(char) < 32 for char in api_key):
+        raise ValueError("FXMACRODATA_API_KEY contains invalid characters")
 
     request = Request(url, headers=headers)
+    if api_key:
+        # Unredirected headers are not copied to a redirect target.
+        request.add_unredirected_header("X-API-Key", api_key)
     with urlopen(request, timeout=20) as response:  # nosec B310
         payload = json.load(response)
 
-    return payload.get("data", [])
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data, list):
+        raise ValueError("unexpected FXMacroData response: missing data list")
+    return data
 
 
 def build_blackout_dates(
